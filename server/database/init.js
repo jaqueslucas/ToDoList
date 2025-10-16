@@ -95,13 +95,31 @@ export const initDatabase = async () => {
         });
       }
 
-      // Create default categories
+      // Create default categories (only if they don't exist)
       const defaultCategories = ['Trabalho', 'Pessoal', 'Estudos', 'Casa'];
       defaultCategories.forEach(category => {
-        db.run(`
-          INSERT OR IGNORE INTO categories (name, user_id)
-          VALUES (?, NULL)
-        `, [category]);
+        // Check if category already exists before inserting
+        db.get('SELECT id FROM categories WHERE LOWER(name) = LOWER(?) AND user_id IS NULL', [category], (err, existingCategory) => {
+          if (err) {
+            console.error('Error checking existing category:', err);
+            return;
+          }
+          
+          if (!existingCategory) {
+            db.run(`
+              INSERT INTO categories (name, user_id)
+              VALUES (?, NULL)
+            `, [category], function(err) {
+              if (err) {
+                console.error('Error creating default category:', err);
+              } else {
+                console.log(`Default category '${category}' created`);
+              }
+            });
+          } else {
+            console.log(`Default category '${category}' already exists`);
+          }
+        });
       });
 
       console.log('Database initialized successfully');

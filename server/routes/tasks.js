@@ -293,10 +293,10 @@ router.post('/categories', authenticateToken, (req, res) => {
       return res.status(400).json({ message: 'Category name is required' });
     }
 
-    // Check if category already exists for this user
+    // Check if category already exists (case-insensitive check)
     const query = currentUser.role === 'admin' 
-      ? 'SELECT id FROM categories WHERE name = ?'
-      : 'SELECT id FROM categories WHERE name = ? AND (user_id = ? OR user_id IS NULL)';
+      ? 'SELECT id FROM categories WHERE LOWER(name) = LOWER(?)'
+      : 'SELECT id FROM categories WHERE LOWER(name) = LOWER(?) AND (user_id = ? OR user_id IS NULL)';
     
     const params = currentUser.role === 'admin' ? [name] : [name, currentUser.id];
 
@@ -306,7 +306,7 @@ router.post('/categories', authenticateToken, (req, res) => {
       }
 
       if (existingCategory) {
-        return res.status(400).json({ message: 'Category already exists' });
+        return res.status(400).json({ message: 'Uma categoria com este nome já existe' });
       }
 
       // Create category
@@ -363,25 +363,42 @@ router.put('/categories/:id', authenticateToken, (req, res) => {
         return res.status(404).json({ message: 'Category not found or no permission' });
       }
 
-      // Update category
-      db.run(
-        'UPDATE categories SET name = ? WHERE id = ?',
-        [name, categoryId],
-        function(err) {
-          if (err) {
-            return res.status(500).json({ message: 'Error updating category' });
-          }
+      // Check if another category with the same name already exists (case-insensitive)
+      const duplicateQuery = currentUser.role === 'admin' 
+        ? 'SELECT id FROM categories WHERE LOWER(name) = LOWER(?) AND id != ?'
+        : 'SELECT id FROM categories WHERE LOWER(name) = LOWER(?) AND id != ? AND (user_id = ? OR user_id IS NULL)';
+      
+      const duplicateParams = currentUser.role === 'admin' ? [name, categoryId] : [name, categoryId, currentUser.id];
 
-          res.json({
-            message: 'Category updated successfully',
-            category: {
-              id: categoryId,
-              name,
-              user_id: category.user_id
-            }
-          });
+      db.get(duplicateQuery, duplicateParams, (err, duplicateCategory) => {
+        if (err) {
+          return res.status(500).json({ message: 'Database error' });
         }
-      );
+
+        if (duplicateCategory) {
+          return res.status(400).json({ message: 'Uma categoria com este nome já existe' });
+        }
+
+        // Update category
+        db.run(
+          'UPDATE categories SET name = ? WHERE id = ?',
+          [name, categoryId],
+          function(err) {
+            if (err) {
+              return res.status(500).json({ message: 'Error updating category' });
+            }
+
+            res.json({
+              message: 'Category updated successfully',
+              category: {
+                id: categoryId,
+                name,
+                user_id: category.user_id
+              }
+            });
+          }
+        );
+      });
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
