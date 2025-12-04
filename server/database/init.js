@@ -102,9 +102,7 @@ export const initDatabase = async () => {
       // Create test users
       const testUsers = [
         { name: 'João Silva', email: 'joao@test.com', password: '123456', role: 'manager' },
-        { name: 'Maria Santos', email: 'maria@test.com', password: '123456', role: 'reader' },
-        { name: 'Pedro Costa', email: 'pedro@test.com', password: '123456', role: 'reader' },
-        { name: 'Ana Oliveira', email: 'ana@test.com', password: '123456', role: 'manager' }
+        { name: 'Maria Santos', email: 'maria@test.com', password: '123456', role: 'reader' }
       ];
 
       for (const user of testUsers) {
