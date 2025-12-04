@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useCallback } from "react";
 import { useAuth } from './AuthContext';
+import { CategoryStatusGroupingStrategy } from '../strategies/GroupingStrategy';
 
 export const TaskContext = createContext();
 
@@ -145,9 +146,9 @@ export const TaskProvider = ({ children }) => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ 
-          title, 
-          description, 
+        body: JSON.stringify({
+          title,
+          description,
           category: categoryName,
           user_id: userId || user.id
         })
@@ -237,35 +238,153 @@ export const TaskProvider = ({ children }) => {
     }
   };
 
-  // Group tasks by category for display
+  const moveTask = async (taskId, newStatus, newPosition, newCategory) => {
+    // Optimistic update
+    setTasks(prev => {
+      const task = prev.find(t => t.id === taskId);
+      if (!task) return prev;
+
+      const oldStatus = task.status || 'todo';
+      const oldPosition = task.position;
+      const oldCategory = task.category;
+
+      const targetStatus = newStatus || oldStatus;
+      const targetCategory = newCategory || oldCategory;
+
+      // Remove task from old position
+      let newTasks = prev.filter(t => t.id !== taskId);
+
+      // Adjust positions of other tasks
+      const isSameColumn = oldStatus === targetStatus && oldCategory === targetCategory;
+
+      if (isSameColumn) {
+        // Moving within same column
+        newTasks = newTasks.map(t => {
+          if (t.status === targetStatus && t.category === targetCategory) {
+            if (oldPosition < newPosition && t.position > oldPosition && t.position <= newPosition) {
+              return { ...t, position: t.position - 1 };
+            }
+            if (oldPosition > newPosition && t.position >= newPosition && t.position < oldPosition) {
+              return { ...t, position: t.position + 1 };
+            }
+          }
+          return t;
+        });
+      } else {
+        // Moving to different column
+        // 1. Shift items in OLD column UP
+        newTasks = newTasks.map(t => {
+          if (t.status === oldStatus && t.category === oldCategory && t.position > oldPosition) {
+            return { ...t, position: t.position - 1 };
+          }
+          return t;
+        });
+
+        // 2. Shift items in NEW column DOWN
+        newTasks = newTasks.map(t => {
+          if (t.status === targetStatus && t.category === targetCategory && t.position >= newPosition) {
+            return { ...t, position: t.position + 1 };
+          }
+          return t;
+        });
+      }
+
+      // Add task to new position
+      const updatedTask = {
+        ...task,
+        status: targetStatus,
+        position: newPosition,
+        category: targetCategory
+      };
+      newTasks.push(updatedTask);
+
+      return newTasks.sort((a, b) => {
+        if (a.category !== b.category) return a.category.localeCompare(b.category);
+        if (a.status !== b.status) return a.status.localeCompare(b.status);
+        return a.position - b.position;
+      });
+    });
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/tasks/move`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ taskId, newStatus, newPosition, newCategory })
+      });
+
+      if (!response.ok) {
+        loadTasks();
+        const data = await response.json();
+        return { success: false, message: data.message };
+      }
+      return { success: true };
+    } catch {
+      loadTasks();
+      return { success: false, message: 'Erro de conexão' };
+    }
+  };
+
+  // Group tasks by Category AND Status
+  const getTasksByCategoryAndStatus = (filterUserId = '') => {
+    const grouped = {};
+
+    categories.forEach(cat => {
+      grouped[cat.name] = {
+        'todo': [],
+        'in_progress': [],
+        'done': []
+      };
+    });
+
+    if (!grouped['Geral']) {
+      grouped['Geral'] = { 'todo': [], 'in_progress': [], 'done': [] };
+    }
+
+    let filteredTasks = tasks;
+    if (filterUserId) {
+      filteredTasks = filteredTasks.filter(t => t.user_id === parseInt(filterUserId));
+    }
+
+    filteredTasks.sort((a, b) => a.position - b.position);
+
+    filteredTasks.forEach(task => {
+      const catName = task.category || 'Geral';
+      const status = task.status || 'todo';
+
+      if (!grouped[catName]) {
+        grouped[catName] = { 'todo': [], 'in_progress': [], 'done': [] };
+      }
+
+      if (grouped[catName][status]) {
+        grouped[catName][status].push(task);
+      } else {
+        grouped[catName]['todo'].push(task);
+      }
+    });
+
+    return grouped;
+  };
+
+  // Legacy support
   const getTasksByCategory = (filterUserId = '') => {
     const grouped = {};
-    
     categories.forEach(category => {
       let categoryTasks = tasks.filter(task => task.category === category.name);
-      
-      // Filtrar por usuário se especificado
       if (filterUserId) {
         categoryTasks = categoryTasks.filter(task => task.user_id === parseInt(filterUserId));
       }
-      
       grouped[category.name] = categoryTasks;
     });
-    
-    // Add tasks without categories
-    let uncategorized = tasks.filter(task => 
-      !categories.find(cat => cat.name === task.category)
-    );
-    
-    // Filtrar por usuário se especificado
+    let uncategorized = tasks.filter(task => !categories.find(cat => cat.name === task.category));
     if (filterUserId && uncategorized.length > 0) {
       uncategorized = uncategorized.filter(task => task.user_id === parseInt(filterUserId));
     }
-    
     if (uncategorized.length > 0) {
       grouped['Geral'] = uncategorized;
     }
-    
     return grouped;
   };
 
@@ -287,22 +406,24 @@ export const TaskProvider = ({ children }) => {
   }, [user, token, loadCategories, loadTasks, loadUsers]);
 
   return (
-    <TaskContext.Provider value={{ 
-      categories, 
-      tasks, 
+    <TaskContext.Provider value={{
+      categories,
+      tasks,
       users,
       addCategory,
       editCategory,
       deleteCategory,
-      addTask, 
-      toggleTask, 
-      removeTask, 
+      addTask,
+      toggleTask,
+      removeTask,
       editTask,
       getTasksByCategory,
+      getTasksByCategoryAndStatus,
       getAllUsers,
-      loadTasks
+      loadTasks,
+      moveTask
     }}>
       {children}
     </TaskContext.Provider>
   );
-}; 
+};

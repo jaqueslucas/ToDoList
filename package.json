@@ -9,9 +9,13 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "server": "nodemon server/index.js",
-    "start": "node server/index.js"
+    "start": "node server/index.js",
+    "test": "vitest"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^7.3.2",
@@ -29,14 +33,20 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.29.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.5.2",
+    "cross-env": "^10.1.0",
     "eslint": "^9.29.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.2.0",
+    "jsdom": "^27.2.0",
     "nodemon": "^3.1.10",
-    "vite": "^7.0.0"
+    "supertest": "^7.1.4",
+    "vite": "^7.0.0",
+    "vitest": "^4.0.15"
   }
 }

@@ -43,11 +43,37 @@ export const initDatabase = async () => {
           completed BOOLEAN DEFAULT FALSE,
           user_id INTEGER NOT NULL,
           category TEXT DEFAULT 'Geral',
+          status TEXT DEFAULT 'todo', -- todo, in_progress, done
+          position INTEGER DEFAULT 0,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (user_id) REFERENCES users (id)
         )
       `);
+
+      // Migration: Add status and position columns if they don't exist
+      db.all("PRAGMA table_info(tasks)", (err, columns) => {
+        if (err) {
+          console.error('Error checking table info:', err);
+          return;
+        }
+
+        const columnNames = columns.map(c => c.name);
+
+        if (!columnNames.includes('status')) {
+          db.run("ALTER TABLE tasks ADD COLUMN status TEXT DEFAULT 'todo'", (err) => {
+            if (err) console.error('Error adding status column:', err);
+            else console.log('Added status column to tasks');
+          });
+        }
+
+        if (!columnNames.includes('position')) {
+          db.run("ALTER TABLE tasks ADD COLUMN position INTEGER DEFAULT 0", (err) => {
+            if (err) console.error('Error adding position column:', err);
+            else console.log('Added position column to tasks');
+          });
+        }
+      });
 
       // Create categories table
       db.run(`
@@ -65,7 +91,7 @@ export const initDatabase = async () => {
       db.run(`
         INSERT OR IGNORE INTO users (name, email, password, role)
         VALUES ('Administrador', 'admin@todolist.com', ?, 'admin')
-      `, [hashedPassword], function(err) {
+      `, [hashedPassword], function (err) {
         if (err) {
           console.error('Error creating admin user:', err);
         } else {
@@ -86,7 +112,7 @@ export const initDatabase = async () => {
         db.run(`
           INSERT OR IGNORE INTO users (name, email, password, role)
           VALUES (?, ?, ?, ?)
-        `, [user.name, user.email, hashedUserPassword, user.role], function(err) {
+        `, [user.name, user.email, hashedUserPassword, user.role], function (err) {
           if (err) {
             console.error('Error creating test user:', err);
           } else {
@@ -104,12 +130,12 @@ export const initDatabase = async () => {
             console.error('Error checking existing category:', err);
             return;
           }
-          
+
           if (!existingCategory) {
             db.run(`
               INSERT INTO categories (name, user_id)
               VALUES (?, NULL)
-            `, [category], function(err) {
+            `, [category], function (err) {
               if (err) {
                 console.error('Error creating default category:', err);
               } else {

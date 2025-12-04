@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 
-const AuthContext = createContext();
+export const AuthContext = createContext();
 
 const API_BASE_URL = 'http://localhost:5000/api';
 
@@ -107,7 +107,7 @@ export const AuthProvider = ({ children }) => {
           logout();
         }
       };
-      
+
       verifyToken();
     }
   }, [token, user, logout]);

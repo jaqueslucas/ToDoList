@@ -6,7 +6,7 @@ import UserManagement from './UserManagement';
 import Header from './Header';
 import { TaskProvider } from '../context/TaskContext';
 import AddCategory from './AddCategory';
-import CategoryList from './CategoryList';
+import CategoryKanban from './CategoryKanban';
 import { Box, CircularProgress } from '@mui/material';
 
 const AppRouter = () => {
@@ -28,14 +28,14 @@ const AppRouter = () => {
   return (
     <TaskProvider>
       <Box sx={{ flexGrow: 1 }}>
-        <Header 
-          onUserManagement={() => setCurrentView('users')} 
+        <Header
+          onUserManagement={() => setCurrentView('users')}
           onDashboard={() => setCurrentView('dashboard')}
           currentView={currentView}
         />
-        <Box component="main" sx={{ 
-          p: 4, 
-          maxWidth: '100%', 
+        <Box component="main" sx={{
+          p: 4,
+          maxWidth: '100%',
           overflow: 'auto',
           minHeight: 'calc(100vh - 80px)',
           backgroundColor: '#f8f5e4'
@@ -43,7 +43,7 @@ const AppRouter = () => {
           {currentView === 'dashboard' && (
             <Box sx={{ maxWidth: 1400, margin: '0 auto' }}>
               <AddCategory />
-              <CategoryList />
+              <CategoryKanban />
             </Box>
           )}
           {currentView === 'users' && (
@@ -61,26 +61,26 @@ const AuthScreen = () => {
   const [isLogin, setIsLogin] = useState(true);
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      display: 'flex', 
-      alignItems: 'center', 
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: '#f8f5e4',
       padding: '20px'
     }}>
-      <div style={{ 
-        padding: '60px', 
-        backgroundColor: 'white', 
+      <div style={{
+        padding: '60px',
+        backgroundColor: 'white',
         borderRadius: '16px',
         boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
         maxWidth: '600px',
         width: '100%',
         minHeight: '600px'
       }}>
-        <h1 style={{ 
-          textAlign: 'center', 
-          marginBottom: '40px', 
+        <h1 style={{
+          textAlign: 'center',
+          marginBottom: '40px',
           color: '#7c5e2a',
           fontSize: '48px',
           fontWeight: 700,
@@ -88,7 +88,7 @@ const AuthScreen = () => {
         }}>
           ToDo List
         </h1>
-        
+
         <div style={{ marginBottom: '40px', display: 'flex', gap: '0' }}>
           <button
             onClick={() => setIsLogin(true)}
@@ -129,9 +129,9 @@ const AuthScreen = () => {
 
         {isLogin ? <Login /> : <Register />}
 
-        <div style={{ 
-          marginTop: '40px', 
-          fontSize: '16px', 
+        <div style={{
+          marginTop: '40px',
+          fontSize: '16px',
           color: '#666',
           textAlign: 'center',
           padding: '24px',
